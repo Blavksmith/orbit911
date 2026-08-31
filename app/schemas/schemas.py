@@ -125,3 +125,96 @@ class RecommendationResponse(BaseModel):
     ranking: list[ZoneRankingItem]
     total_zones: int
     feasible_zones: int
+
+
+# ── What-If schemas ───────────────────────────────────────────────────────────
+
+class WildfireOverride(BaseModel):
+    """
+    Temporary overrides for a single wildfire zone's fields.
+    Only provided fields are changed; omitted fields keep their stored values.
+    All numeric fields use the same 0–100 scale as the model.
+    """
+    severity: Optional[float] = Field(default=None, ge=0, le=100)
+    fire_growth_rate: Optional[float] = Field(default=None, ge=0, le=100)
+    detection_recency_hours: Optional[float] = Field(default=None, ge=0)
+    population_exposed: Optional[int] = Field(default=None, ge=0)
+    hospital_risk: Optional[float] = Field(default=None, ge=0, le=100)
+    critical_infrastructure_risk: Optional[float] = Field(default=None, ge=0, le=100)
+
+
+class OpportunityOverride(BaseModel):
+    """
+    Temporary overrides for a wildfire's best observation opportunity.
+    Setting is_available=False simulates the satellite becoming unavailable.
+    """
+    visibility_score: Optional[float] = Field(default=None, ge=0, le=100)
+    observation_window_minutes: Optional[float] = Field(default=None, ge=0)
+    is_available: Optional[bool] = None
+
+
+class ZoneOverride(BaseModel):
+    """Combined overrides for one wildfire zone (wildfire fields + opportunity fields)."""
+    wildfire: Optional[WildfireOverride] = None
+    opportunity: Optional[OpportunityOverride] = None
+
+
+class WhatIfRequest(BaseModel):
+    """
+    Request body for POST /api/recommendation/what-if.
+
+    `overrides` maps wildfire_id (as a string key) to the changes to apply.
+
+    Example — make Zone B unobservable:
+        { "overrides": { "2": { "opportunity": { "is_available": false } } } }
+
+    Example — increase Zone B fire growth and hospital risk:
+        { "overrides": { "2": { "wildfire": { "fire_growth_rate": 100, "hospital_risk": 100 } } } }
+    """
+    overrides: dict[str, ZoneOverride] = Field(
+        default_factory=dict,
+        description="Map of wildfire_id (string) → ZoneOverride with temporary changes.",
+    )
+
+
+class ScoreChange(BaseModel):
+    """Before/after score comparison for one zone."""
+    wildfire_id: int
+    wildfire_name: str
+    original_emergency_priority: float
+    new_emergency_priority: float
+    original_satellite_feasibility: float
+    new_satellite_feasibility: float
+    original_final_score: float
+    new_final_score: float
+    original_feasible: bool
+    new_feasible: bool
+
+
+class WhatIfResponse(BaseModel):
+    """
+    Response for POST /api/recommendation/what-if.
+
+    Contains the original recommendation, the new recommendation after applying
+    the overrides, a per-zone score comparison, and a plain-English explanation
+    of what changed and why.
+    """
+    # Recommendations
+    original_recommendation: Optional[str]
+    original_wildfire_id: Optional[int]
+    new_recommendation: Optional[str]
+    new_wildfire_id: Optional[int]
+    recommendation_changed: bool
+
+    # Full rankings (before and after)
+    original_ranking: list[ZoneRankingItem]
+    new_ranking: list[ZoneRankingItem]
+
+    # Applied overrides expressed as human-readable strings
+    changes: list[str]
+
+    # Explanation of why the recommendation changed (or didn't)
+    reasons: list[str]
+
+    # Per-zone score delta (only zones that actually changed)
+    score_changes: list[ScoreChange]

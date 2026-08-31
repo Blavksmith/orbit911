@@ -10,6 +10,12 @@ from app.schemas.schemas import (
     ZoneRankingItem,
     RecommendationDetail,
     RecommendationResponse,
+    WildfireOverride,
+    OpportunityOverride,
+    ZoneOverride,
+    WhatIfRequest,
+    ScoreChange,
+    WhatIfResponse,
 )
 
 __all__ = [
@@ -24,4 +30,10 @@ __all__ = [
     "ZoneRankingItem",
     "RecommendationDetail",
     "RecommendationResponse",
+    "WildfireOverride",
+    "OpportunityOverride",
+    "ZoneOverride",
+    "WhatIfRequest",
+    "ScoreChange",
+    "WhatIfResponse",
 ]
