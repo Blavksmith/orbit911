@@ -1,16 +1,22 @@
 'use client'
 
 import { CheckCircle } from 'lucide-react'
-import type { RecommendationResponse } from '@/lib/types'
-import { MOCK_SATELLITES } from '@/data/mock'
+import type { RecommendationResponse, Satellite } from '@/lib/types'
 
 interface RecommendationPanelProps {
   data: RecommendationResponse
+  satellites: Satellite[]
+  /** True when showing a What-If scenario rather than live data */
+  isWhatIf?: boolean
 }
 
-export default function RecommendationPanel({ data }: RecommendationPanelProps) {
+export default function RecommendationPanel({ data, satellites, isWhatIf }: RecommendationPanelProps) {
   const rec = data.recommendation
-  const assignedSat = MOCK_SATELLITES.find((s) => s.id === 1)
+
+  // Find the best available satellite (highest visibility among available ones)
+  const assignedSat = satellites
+    .filter((s) => s.is_available && s.observation_window_minutes > 0)
+    .sort((a, b) => b.visibility_score - a.visibility_score)[0] ?? null
 
   if (!rec || !data.recommended_target) {
     return (
@@ -24,9 +30,11 @@ export default function RecommendationPanel({ data }: RecommendationPanelProps) 
     <div className="bg-slate-900 border border-slate-700 rounded p-4 space-y-4">
       {/* OBSERVE NEXT badge + zone name */}
       <div>
-        <span className="inline-block bg-red-600 text-white text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded mb-2">
-          Observe Next
-        </span>
+        <div className="flex items-center gap-2 mb-2">
+          <span className={`inline-block text-white text-xs font-semibold uppercase tracking-widest px-2 py-0.5 rounded ${isWhatIf ? 'bg-orange-600' : 'bg-red-600'}`}>
+            {isWhatIf ? 'What-If Result' : 'Observe Next'}
+          </span>
+        </div>
         <h2 className="text-slate-100 text-lg font-semibold leading-tight">
           {data.recommended_target}
         </h2>
@@ -45,7 +53,9 @@ export default function RecommendationPanel({ data }: RecommendationPanelProps) 
           <span className="text-blue-400 text-sm">✦</span>
           <span className="text-slate-300 text-sm">{assignedSat.name}</span>
           <span className="text-slate-500 text-xs">·</span>
-          <span className="text-slate-400 text-xs">{assignedSat.observation_window_minutes} min window</span>
+          <span className="text-slate-400 text-xs">
+            {assignedSat.observation_window_minutes} min window
+          </span>
         </div>
       )}
 

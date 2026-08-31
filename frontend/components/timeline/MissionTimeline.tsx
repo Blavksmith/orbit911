@@ -1,17 +1,11 @@
 'use client'
 
-import type { ZoneRankingItem } from '@/lib/types'
+import type { ZoneRankingItem, Satellite } from '@/lib/types'
 
 interface MissionTimelineProps {
   ranking: ZoneRankingItem[]
+  satellites: Satellite[]
   recommendedWildfireId: number | null
-}
-
-const ZONE_WINDOWS: Record<number, number> = {
-  1: 12,
-  2: 18,
-  3: 0,
-  4: 0,
 }
 
 const ZONE_COLORS: Record<number, string> = {
@@ -21,17 +15,38 @@ const ZONE_COLORS: Record<number, string> = {
   4: 'border-slate-600 bg-slate-800',
 }
 
-export default function MissionTimeline({ ranking, recommendedWildfireId }: MissionTimelineProps) {
+export default function MissionTimeline({
+  ranking,
+  satellites,
+  recommendedWildfireId,
+}: MissionTimelineProps) {
   const feasible = ranking.filter((z) => z.feasible)
   const infeasible = ranking.filter((z) => !z.feasible)
 
-  // Lay out timeline starting from T+0
-  let cumulativeMinutes = 0
-  const entries = feasible.map((zone, idx) => {
-    const windowMins = ZONE_WINDOWS[zone.wildfire_id] ?? 10
-    const start = cumulativeMinutes
-    cumulativeMinutes += windowMins + 5 // 5 min buffer between windows
-    return { zone, start, duration: windowMins, idx }
+  // Build a window-minutes lookup from satellites: best available window per zone
+  // Since the backend ranks by feasibility, we approximate using the best
+  // available satellite's window for each feasible zone slot.
+  const availableSats = satellites.filter((s) => s.is_available && s.observation_window_minutes > 0)
+  const windows = feasible.map((zone, idx) => {
+    // Use the satellite window from the ranking's feasibility breakdown if >0,
+    // otherwise fall back to the best available satellite.
+    const fromBreakdown = zone.feasibility_breakdown.window_score
+    if (fromBreakdown > 0) {
+      // window_score is 0–100 normalised; reverse-engineer minutes from it
+      // MAX_WINDOW = 20 min (from feasibility_engine.py)
+      const MIN_W = 1, MAX_W = 20
+      const approxMinutes = Math.round((fromBreakdown / 100) * (MAX_W - MIN_W) + MIN_W)
+      return { zone, windowMins: approxMinutes }
+    }
+    const sat = availableSats[idx % Math.max(availableSats.length, 1)]
+    return { zone, windowMins: sat?.observation_window_minutes ?? 10 }
+  })
+
+  let cumulative = 0
+  const entries = windows.map(({ zone, windowMins }) => {
+    const start = cumulative
+    cumulative += windowMins + 5 // 5-min buffer between passes
+    return { zone, start, duration: windowMins }
   })
 
   return (
@@ -42,26 +57,27 @@ export default function MissionTimeline({ ranking, recommendedWildfireId }: Miss
 
       {/* Timeline track */}
       <div className="relative">
-        {/* Track line */}
-        <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-700" />
+        <div className="absolute left-1.5 top-0 bottom-0 w-px bg-slate-700" />
 
         <div className="space-y-3">
           {entries.map(({ zone, start, duration }) => {
             const isNext = zone.wildfire_id === recommendedWildfireId
-            const colorClass = ZONE_COLORS[zone.wildfire_id] ?? 'border-slate-600 bg-slate-800'
+            const colorClass = ZONE_COLORS[zone.rank] ?? 'border-slate-600 bg-slate-800'
 
             return (
-              <div key={zone.wildfire_id} className="flex items-start gap-4 pl-0">
-                {/* Timeline dot */}
-                <div className="flex flex-col items-center flex-shrink-0 z-10">
+              <div key={zone.wildfire_id} className="flex items-start gap-4">
+                {/* Dot */}
+                <div className="flex-shrink-0 z-10 mt-1">
                   <div
-                    className={`w-3 h-3 rounded-full border-2 mt-1 ${
-                      isNext ? 'border-red-400 bg-red-400' : 'border-slate-500 bg-slate-800'
+                    className={`w-3 h-3 rounded-full border-2 ${
+                      isNext
+                        ? 'border-red-400 bg-red-400'
+                        : 'border-slate-500 bg-slate-800'
                     }`}
                   />
                 </div>
 
-                {/* Content */}
+                {/* Card */}
                 <div
                   className={`flex-1 border rounded px-3 py-2 text-sm ${colorClass} ${
                     isNext ? 'border-red-500' : ''
@@ -74,7 +90,11 @@ export default function MissionTimeline({ ranking, recommendedWildfireId }: Miss
                           NEXT
                         </span>
                       )}
-                      <span className={`font-medium ${isNext ? 'text-slate-100' : 'text-slate-300'}`}>
+                      <span
+                        className={`font-medium ${
+                          isNext ? 'text-slate-100' : 'text-slate-300'
+                        }`}
+                      >
                         {zone.wildfire_name}
                       </span>
                     </div>
@@ -90,11 +110,11 @@ export default function MissionTimeline({ ranking, recommendedWildfireId }: Miss
             )
           })}
 
-          {/* Infeasible zones */}
+          {/* Infeasible zones — muted */}
           {infeasible.map((zone) => (
-            <div key={zone.wildfire_id} className="flex items-start gap-4 pl-0">
-              <div className="flex flex-col items-center flex-shrink-0 z-10">
-                <div className="w-3 h-3 rounded-full border-2 border-slate-700 bg-slate-900 mt-1" />
+            <div key={zone.wildfire_id} className="flex items-start gap-4">
+              <div className="flex-shrink-0 z-10 mt-1">
+                <div className="w-3 h-3 rounded-full border-2 border-slate-700 bg-slate-900" />
               </div>
               <div className="flex-1 border border-slate-700 rounded px-3 py-2 text-sm bg-slate-900 opacity-50">
                 <div className="flex items-center justify-between">

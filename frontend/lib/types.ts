@@ -80,3 +80,76 @@ export interface RecommendationResponse {
   total_zones: number
   feasible_zones: number
 }
+
+// ── AI chat ───────────────────────────────────────────────────────────────────
+
+export interface ChatResponse {
+  response: string
+}
+
+// ── What-If request (matches backend WhatIfRequest schema exactly) ────────────
+
+export interface WildfireOverride {
+  severity?: number | null
+  fire_growth_rate?: number | null
+  detection_recency_hours?: number | null
+  population_exposed?: number | null
+  hospital_risk?: number | null
+  critical_infrastructure_risk?: number | null
+}
+
+export interface OpportunityOverride {
+  visibility_score?: number | null
+  observation_window_minutes?: number | null
+  is_available?: boolean | null
+}
+
+export interface ZoneOverride {
+  wildfire?: WildfireOverride | null
+  opportunity?: OpportunityOverride | null
+}
+
+export interface WhatIfRequest {
+  /** Map of wildfire_id (as string) → ZoneOverride */
+  overrides: Record<string, ZoneOverride>
+}
+
+// ── What-If response (matches backend WhatIfResponse schema exactly) ──────────
+
+export interface ScoreChange {
+  wildfire_id: number
+  wildfire_name: string
+  original_emergency_priority: number
+  new_emergency_priority: number
+  original_satellite_feasibility: number
+  new_satellite_feasibility: number
+  original_final_score: number
+  new_final_score: number
+  original_feasible: boolean
+  new_feasible: boolean
+}
+
+export interface WhatIfResponse {
+  original_recommendation: string | null
+  original_wildfire_id: number | null
+  new_recommendation: string | null
+  new_wildfire_id: number | null
+  recommendation_changed: boolean
+  original_ranking: ZoneRankingItem[]
+  new_ranking: ZoneRankingItem[]
+  changes: string[]
+  reasons: string[]
+  score_changes: ScoreChange[]
+}
+
+// ── Dashboard loading state ───────────────────────────────────────────────────
+
+export type LoadStatus = 'idle' | 'loading' | 'success' | 'error'
+
+export interface DashboardState {
+  wildfires: Wildfire[]
+  satellites: Satellite[]
+  recommendation: RecommendationResponse | null
+  status: LoadStatus
+  error: string | null
+}

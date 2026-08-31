@@ -1,23 +1,114 @@
-import type { RecommendationResponse, Wildfire, Satellite } from '@/lib/types'
-import { MOCK_RECOMMENDATION, MOCK_WILDFIRES, MOCK_SATELLITES } from '@/data/mock'
+/**
+ * api.ts
+ * ======
+ * All API calls to the Orbit911 FastAPI backend.
+ *
+ * Base URL is read from NEXT_PUBLIC_API_BASE_URL (set in .env.local).
+ * Falls back to http://localhost:8000 for local development.
+ *
+ * All functions throw an ApiError on non-2xx responses so callers can
+ * distinguish network failures from application errors.
+ */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+import type {
+  Wildfire,
+  Satellite,
+  RecommendationResponse,
+  ChatResponse,
+  WhatIfRequest,
+  WhatIfResponse,
+} from '@/lib/types'
 
-// Phase 1: All functions return mock data.
-// Phase 2: Replace with real fetch calls to the FastAPI backend.
+const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
 
-export async function getRecommendation(): Promise<RecommendationResponse> {
-  // Phase 2: return fetch(`${API_BASE}/recommend`).then(r => r.json())
-  void API_BASE
-  return Promise.resolve(MOCK_RECOMMENDATION)
+// ── Error type ────────────────────────────────────────────────────────────────
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
 }
+
+// ── Shared fetch helper ───────────────────────────────────────────────────────
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const url = `${BASE}${path}`
+  let res: Response
+
+  try {
+    res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+    })
+  } catch {
+    // Network-level failure (backend not running, CORS, etc.)
+    throw new ApiError(0, `Cannot reach backend at ${BASE}. Is the server running?`)
+  }
+
+  if (!res.ok) {
+    let detail = res.statusText
+    try {
+      const body = await res.json()
+      if (body?.detail) detail = String(body.detail)
+    } catch {
+      // ignore parse error
+    }
+    throw new ApiError(res.status, detail)
+  }
+
+  return res.json() as Promise<T>
+}
+
+// ── Wildfire endpoints ────────────────────────────────────────────────────────
 
 export async function getWildfires(): Promise<Wildfire[]> {
-  // Phase 2: return fetch(`${API_BASE}/wildfires`).then(r => r.json())
-  return Promise.resolve(MOCK_WILDFIRES)
+  return apiFetch<Wildfire[]>('/api/wildfires')
 }
 
+export async function getWildfire(id: number): Promise<Wildfire> {
+  return apiFetch<Wildfire>(`/api/wildfires/${id}`)
+}
+
+// ── Satellite endpoints ───────────────────────────────────────────────────────
+
 export async function getSatellites(): Promise<Satellite[]> {
-  // Phase 2: return fetch(`${API_BASE}/satellites`).then(r => r.json())
-  return Promise.resolve(MOCK_SATELLITES)
+  return apiFetch<Satellite[]>('/api/satellites')
+}
+
+export async function getSatellite(id: number): Promise<Satellite> {
+  return apiFetch<Satellite>(`/api/satellites/${id}`)
+}
+
+// ── Recommendation endpoints ──────────────────────────────────────────────────
+
+export async function getRecommendation(): Promise<RecommendationResponse> {
+  return apiFetch<RecommendationResponse>('/api/recommendation')
+}
+
+export async function recalculate(): Promise<RecommendationResponse> {
+  return apiFetch<RecommendationResponse>('/api/recommendation/recalculate', {
+    method: 'POST',
+  })
+}
+
+// ── What-If endpoint ─────────────────────────────────────────────────────────
+
+export async function postWhatIf(body: WhatIfRequest): Promise<WhatIfResponse> {
+  return apiFetch<WhatIfResponse>('/api/recommendation/what-if', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+// ── AI chat endpoint ──────────────────────────────────────────────────────────
+
+export async function sendChatMessage(message: string): Promise<ChatResponse> {
+  return apiFetch<ChatResponse>('/api/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  })
 }
