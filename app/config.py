@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./orbit911.db"
 
+    # Google Gemini AI
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

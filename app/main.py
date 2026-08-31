@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from app.config import settings
 from app.database import Base, engine
-from app.routers import health, wildfires, satellites, recommendation
+from app.routers import health, wildfires, satellites, recommendation, ai
 
 # Create all database tables on startup
 Base.metadata.create_all(bind=engine)
@@ -18,3 +18,4 @@ app.include_router(health.router)
 app.include_router(wildfires.router)
 app.include_router(satellites.router)
 app.include_router(recommendation.router)
+app.include_router(ai.router)
