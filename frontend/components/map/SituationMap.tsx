@@ -24,7 +24,9 @@ interface SituationMapProps {
   wildfires: Wildfire[]
   satellites: Satellite[]
   recommendedWildfireId: number | null
+  selectedWildfireId: number | null
   unobservableWildfireIds: number[]
+  onSelectWildfire: (wildfireId: number) => void
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -60,7 +62,9 @@ export default function SituationMap({
   wildfires,
   satellites,
   recommendedWildfireId,
+  selectedWildfireId,
   unobservableWildfireIds,
+  onSelectWildfire,
 }: SituationMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<Map | null>(null)
@@ -115,6 +119,7 @@ export default function SituationMap({
       // ── Wildfire markers ────────────────────────────────────────────────
       wildfires.forEach((wf) => {
         const isRecommended = wf.id === recommendedWildfireId
+        const isSelected = wf.id === selectedWildfireId
         const isInfeasible = unobservableWildfireIds.includes(wf.id)
         const color = isInfeasible
           ? '#64748b'
@@ -144,6 +149,17 @@ export default function SituationMap({
 
         // Main circle marker
         const el = document.createElement('div')
+        el.setAttribute('role', 'button')
+        el.setAttribute('aria-label', `Select ${wf.name}`)
+        el.tabIndex = 0
+        const selectWildfire = () => onSelectWildfire(wf.id)
+        el.addEventListener('click', selectWildfire)
+        el.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            selectWildfire()
+          }
+        })
         el.style.cssText = `
           width: ${radius * 2}px;
           height: ${radius * 2}px;
@@ -152,7 +168,7 @@ export default function SituationMap({
           border: ${isRecommended ? '3px solid #fff' : '1.5px solid rgba(255,255,255,0.25)'};
           opacity: ${isInfeasible ? 0.35 : 0.88};
           cursor: pointer;
-          box-shadow: ${isRecommended ? '0 0 12px rgba(248,113,113,0.6)' : 'none'};
+          box-shadow: ${isSelected ? '0 0 0 3px rgba(96,165,250,0.85), 0 0 12px rgba(96,165,250,0.4)' : isRecommended ? '0 0 12px rgba(248,113,113,0.6)' : 'none'};
         `
 
         const popup = new Popup({ offset: radius + 4, closeButton: false })
@@ -222,7 +238,7 @@ export default function SituationMap({
     return () => {
       mapInstance.off('load', addMarkers)
     }
-  }, [wildfires, satellites, recommendedWildfireId, unobservableWildfireIds])
+  }, [wildfires, satellites, recommendedWildfireId, selectedWildfireId, unobservableWildfireIds, onSelectWildfire])
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (

@@ -14,6 +14,7 @@ import type {
   Wildfire,
   Satellite,
   RecommendationResponse,
+  ObservationConfirmationResponse,
   ChatResponse,
   WhatIfRequest,
   WhatIfResponse,
@@ -92,6 +93,16 @@ export async function getRecommendation(): Promise<RecommendationResponse> {
 export async function recalculate(): Promise<RecommendationResponse> {
   return apiFetch<RecommendationResponse>('/api/recommendation/recalculate', {
     method: 'POST',
+  })
+}
+
+export async function confirmObservation(
+  wildfireId: number,
+  satelliteId: number,
+): Promise<ObservationConfirmationResponse> {
+  return apiFetch<ObservationConfirmationResponse>('/api/recommendation/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ wildfire_id: wildfireId, satellite_id: satelliteId }),
   })
 }
 

@@ -252,3 +252,105 @@ def test_recalculate_matches_get(client, seeded_db):
     # Both should produce identical deterministic results
     assert get_resp.json()["recommended_target"] == post_resp.json()["recommended_target"]
     assert get_resp.json()["ranking"][0]["final_score"] == post_resp.json()["ranking"][0]["final_score"]
+
+
+# ── POST /api/recommendation/confirm ─────────────────────────────────────────
+
+def test_confirm_observation_queues_available_satellite(client, seeded_db):
+    wildfire_id, satellite_id = seeded_db
+
+    response = client.post(
+        "/api/recommendation/confirm",
+        json={"wildfire_id": wildfire_id, "satellite_id": satellite_id},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "confirmed",
+        "wildfire_id": wildfire_id,
+        "satellite_id": satellite_id,
+        "message": "Observation for Zone B confirmed and queued.",
+    }
+
+
+def test_confirm_observation_rejects_missing_wildfire(client, seeded_db):
+    _, satellite_id = seeded_db
+
+    response = client.post(
+        "/api/recommendation/confirm",
+        json={"wildfire_id": 99999, "satellite_id": satellite_id},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Wildfire not found."
+
+
+def test_confirm_observation_rejects_missing_satellite(client, seeded_db):
+    wildfire_id, _ = seeded_db
+
+    response = client.post(
+        "/api/recommendation/confirm",
+        json={"wildfire_id": wildfire_id, "satellite_id": 99999},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Satellite not found."
+
+
+def test_confirm_observation_rejects_unavailable_satellite(client, seeded_db):
+    wildfire_id, satellite_id = seeded_db
+    from tests.conftest import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        satellite = db.get(Satellite, satellite_id)
+        satellite.is_available = False
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.post(
+        "/api/recommendation/confirm",
+        json={"wildfire_id": wildfire_id, "satellite_id": satellite_id},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Satellite is not available for tasking."
+
+
+def test_confirm_observation_rejects_stale_recommendation(client, seeded_db):
+    wildfire_id, satellite_id = seeded_db
+    from tests.conftest import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        lower_priority_wildfire = Wildfire(**_make_wildfire(
+            name="Zone Lower",
+            severity=10.0,
+            fire_growth_rate=10.0,
+            population_exposed=100,
+            hospital_risk=0.0,
+            critical_infrastructure_risk=0.0,
+        ))
+        db.add(lower_priority_wildfire)
+        db.flush()
+        db.add(ObservationOpportunity(
+            wildfire_id=lower_priority_wildfire.id,
+            satellite_id=satellite_id,
+            visibility_score=90.0,
+            observation_window_minutes=15.0,
+            is_available=True,
+        ))
+        db.commit()
+        stale_wildfire_id = lower_priority_wildfire.id
+    finally:
+        db.close()
+
+    response = client.post(
+        "/api/recommendation/confirm",
+        json={"wildfire_id": stale_wildfire_id, "satellite_id": satellite_id},
+    )
+
+    assert stale_wildfire_id != wildfire_id
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Selected wildfire is no longer the current recommended target."

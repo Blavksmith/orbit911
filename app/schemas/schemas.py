@@ -127,6 +127,20 @@ class RecommendationResponse(BaseModel):
     feasible_zones: int
 
 
+class ObservationConfirmationRequest(BaseModel):
+    """Simulated tasking request for a recommended observation."""
+    wildfire_id: int = Field(..., gt=0)
+    satellite_id: int = Field(..., gt=0)
+
+
+class ObservationConfirmationResponse(BaseModel):
+    """Result of queuing a simulated observation."""
+    status: str
+    wildfire_id: int
+    satellite_id: int
+    message: str
+
+
 # ── What-If schemas ───────────────────────────────────────────────────────────
 
 class WildfireOverride(BaseModel):

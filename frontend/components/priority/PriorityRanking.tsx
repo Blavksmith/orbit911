@@ -4,6 +4,8 @@ import type { ZoneRankingItem } from '@/lib/types'
 
 interface PriorityRankingProps {
   ranking: ZoneRankingItem[]
+  selectedWildfireId: number | null
+  onSelectWildfire: (wildfireId: number) => void
 }
 
 function severityDot(score: number): string {
@@ -13,7 +15,11 @@ function severityDot(score: number): string {
   return 'bg-slate-500'
 }
 
-export default function PriorityRanking({ ranking }: PriorityRankingProps) {
+export default function PriorityRanking({
+  ranking,
+  selectedWildfireId,
+  onSelectWildfire,
+}: PriorityRankingProps) {
   return (
     <div className="bg-slate-900 border border-slate-700 rounded p-4 space-y-1">
       <h3 className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">
@@ -25,10 +31,16 @@ export default function PriorityRanking({ ranking }: PriorityRankingProps) {
       ) : (
         <div className="space-y-1.5">
           {ranking.map((zone) => (
-            <div
+            <button
               key={zone.wildfire_id}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded text-sm transition-colors ${
-                zone.is_recommended
+              type="button"
+              aria-label={`Select ${zone.wildfire_name}`}
+              aria-pressed={zone.wildfire_id === selectedWildfireId}
+              onClick={() => onSelectWildfire(zone.wildfire_id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded text-sm text-left transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/70 ${
+                zone.wildfire_id === selectedWildfireId
+                  ? 'bg-blue-950/40 border border-blue-700/70 ring-1 ring-blue-700/40'
+                  : zone.is_recommended
                   ? 'bg-slate-800 border border-red-900/60 ring-1 ring-red-900/40'
                   : 'hover:bg-slate-800/50 border border-transparent'
               } ${!zone.feasible ? 'opacity-60' : ''}`}
@@ -85,7 +97,7 @@ export default function PriorityRanking({ ranking }: PriorityRankingProps) {
                   <span className="text-slate-700 font-mono text-sm">—</span>
                 )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RefreshCw, AlertTriangle, Loader2 } from 'lucide-react'
 import { useDashboard } from '@/hooks/useDashboard'
 import Header from '@/components/dashboard/Header'
@@ -52,6 +52,7 @@ export default function Dashboard() {
 
   // What-If state — when set, overrides the sidebar display
   const [whatIfResult, setWhatIfResult] = useState<WhatIfResponse | null>(null)
+  const [selectedWildfireId, setSelectedWildfireId] = useState<number | null>(null)
 
   // Active recommendation: What-If result (if any) takes precedence over live data
   const activeRec: RecommendationResponse | null =
@@ -64,6 +65,16 @@ export default function Dashboard() {
     .filter((zone) => !zone.feasible)
     .map((zone) => zone.wildfire_id) ?? []
   const isWhatIfActive = whatIfResult !== null
+  const selectedZone = activeRec?.ranking.find(
+    (zone) => zone.wildfire_id === (selectedWildfireId ?? recommendedId),
+  ) ?? null
+
+  useEffect(() => {
+    if (!activeRec) return
+    if (!activeRec.ranking.some((zone) => zone.wildfire_id === selectedWildfireId)) {
+      setSelectedWildfireId(activeRec.recommended_wildfire_id)
+    }
+  }, [activeRec, selectedWildfireId])
 
   function clearWhatIf() {
     setWhatIfResult(null)
@@ -137,7 +148,9 @@ export default function Dashboard() {
               wildfires={wildfires}
               satellites={satellites}
               recommendedWildfireId={recommendedId}
+              selectedWildfireId={selectedZone?.wildfire_id ?? recommendedId}
               unobservableWildfireIds={unobservableWildfireIds}
+              onSelectWildfire={setSelectedWildfireId}
             />
           </div>
 
@@ -165,11 +178,17 @@ export default function Dashboard() {
                 <RecommendationPanel
                   data={activeRec}
                   satellites={satellites}
+                  selectedZone={selectedZone}
                   isWhatIf={isWhatIfActive}
                 />
                 <WhyPanel
-                  zoneName={activeRec.recommended_target ?? ''}
-                  recommendation={activeRec.recommendation}
+                  zoneName={selectedZone?.wildfire_name ?? ''}
+                  recommendation={{
+                    emergency_priority: selectedZone?.emergency_priority ?? 0,
+                    satellite_feasibility: selectedZone?.satellite_feasibility ?? 0,
+                    final_score: selectedZone?.final_score ?? 0,
+                    reasons: selectedZone?.reasons ?? [],
+                  }}
                 />
               </>
             ) : (
@@ -180,7 +199,11 @@ export default function Dashboard() {
 
             {/* Priority ranking */}
             {activeRec && (
-              <PriorityRanking ranking={activeRec.ranking} />
+              <PriorityRanking
+                ranking={activeRec.ranking}
+                selectedWildfireId={selectedZone?.wildfire_id ?? recommendedId}
+                onSelectWildfire={setSelectedWildfireId}
+              />
             )}
 
             {/* What-If — always uses live ranking for controls, result shown inline */}

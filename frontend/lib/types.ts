@@ -81,6 +81,13 @@ export interface RecommendationResponse {
   feasible_zones: number
 }
 
+export interface ObservationConfirmationResponse {
+  status: 'confirmed'
+  wildfire_id: number
+  satellite_id: number
+  message: string
+}
+
 // ── AI chat ───────────────────────────────────────────────────────────────────
 
 export interface ChatResponse {

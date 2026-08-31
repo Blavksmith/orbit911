@@ -14,12 +14,14 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.engine.recommendation_engine import ZoneInput, rank_zones, ZoneResult
-from app.models import ObservationOpportunity
+from app.models import ObservationOpportunity, Satellite, Wildfire
 from app.schemas import (
     FeasibilityBreakdownResponse,
     PriorityBreakdownResponse,
     RecommendationDetail,
     RecommendationResponse,
+    ObservationConfirmationRequest,
+    ObservationConfirmationResponse,
     ScoreChange,
     WhatIfRequest,
     WhatIfResponse,
@@ -170,6 +172,41 @@ def recalculate_recommendation(db: Session = Depends(get_db)):
         )
     ranked = rank_zones(zones)
     return _build_response(ranked)
+
+
+@router.post("/confirm", response_model=ObservationConfirmationResponse)
+def confirm_observation(
+    body: ObservationConfirmationRequest,
+    db: Session = Depends(get_db),
+):
+    """Queue a simulated observation; no external satellite command is issued."""
+    wildfire = db.get(Wildfire, body.wildfire_id)
+    if wildfire is None:
+        raise HTTPException(status_code=404, detail="Wildfire not found.")
+
+    satellite = db.get(Satellite, body.satellite_id)
+    if satellite is None:
+        raise HTTPException(status_code=404, detail="Satellite not found.")
+    if not satellite.is_available:
+        raise HTTPException(status_code=409, detail="Satellite is not available for tasking.")
+
+    zones = _load_zone_inputs(db)
+    current_recommendation = next(
+        (zone for zone in rank_zones(zones) if zone.is_recommended),
+        None,
+    )
+    if current_recommendation is None or current_recommendation.wildfire_id != wildfire.id:
+        raise HTTPException(
+            status_code=409,
+            detail="Selected wildfire is no longer the current recommended target.",
+        )
+
+    return ObservationConfirmationResponse(
+        status="confirmed",
+        wildfire_id=wildfire.id,
+        satellite_id=satellite.id,
+        message=f"Observation for {wildfire.name} confirmed and queued.",
+    )
 
 
 # ── What-If helpers ───────────────────────────────────────────────────────────
