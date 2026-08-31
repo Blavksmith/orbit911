@@ -16,9 +16,10 @@ describe('RecommendationPanel', () => {
 
   it('shows the three key scores', () => {
     render(<RecommendationPanel data={MOCK_RECOMMENDATION} satellites={MOCK_SATELLITES} />)
-    expect(screen.getByText('77.42')).toBeInTheDocument()
-    expect(screen.getByText('77.50')).toBeInTheDocument()
-    expect(screen.getByText('59.99')).toBeInTheDocument()
+    // Scores now rendered with .toFixed(1) for cleaner display
+    expect(screen.getByText('77.4')).toBeInTheDocument()
+    expect(screen.getByText('77.5')).toBeInTheDocument()
+    expect(screen.getByText('60.0')).toBeInTheDocument()
   })
 
   it('renders the confirm button', () => {

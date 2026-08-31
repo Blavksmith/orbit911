@@ -60,6 +60,9 @@ export default function Dashboard() {
       : liveRec
 
   const recommendedId = activeRec?.recommended_wildfire_id ?? null
+  const unobservableWildfireIds = activeRec?.ranking
+    .filter((zone) => !zone.feasible)
+    .map((zone) => zone.wildfire_id) ?? []
   const isWhatIfActive = whatIfResult !== null
 
   function clearWhatIf() {
@@ -134,6 +137,7 @@ export default function Dashboard() {
               wildfires={wildfires}
               satellites={satellites}
               recommendedWildfireId={recommendedId}
+              unobservableWildfireIds={unobservableWildfireIds}
             />
           </div>
 

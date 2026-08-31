@@ -14,7 +14,7 @@ describe('PriorityRanking', () => {
 
   it('marks Zone B as recommended', () => {
     render(<PriorityRanking ranking={MOCK_RECOMMENDATION.ranking} />)
-    expect(screen.getByText('Recommended')).toBeInTheDocument()
+    expect(screen.getByText('● Recommended')).toBeInTheDocument()
   })
 
   it('marks Zone D as not observable', () => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
- useimport { Send, Loader2, Bot } from 'lucide-react'
+import { Send, Loader2, Bot } from 'lucide-react'
 import { sendChatMessage, ApiError } from '@/lib/api'
 
 interface Message {
