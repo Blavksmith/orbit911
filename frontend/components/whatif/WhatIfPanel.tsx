@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { RefreshCw, ArrowRight, AlertTriangle } from 'lucide-react'
+import { RefreshCw, ArrowRight, AlertTriangle, ChevronRight } from 'lucide-react'
 import { postWhatIf, ApiError } from '@/lib/api'
 import type {
   ZoneRankingItem,
@@ -10,8 +10,6 @@ import type {
 } from '@/lib/types'
 
 // ── Condition definitions ─────────────────────────────────────────────────────
-// Each condition maps to a specific override sent to POST /api/recommendation/what-if
-// The backend does all scoring — the frontend only describes the change.
 
 interface Condition {
   value: string
@@ -62,16 +60,14 @@ const CONDITIONS: Condition[] = [
 
 interface WhatIfPanelProps {
   ranking: ZoneRankingItem[]
-  /** Called when a recalculation produces a new recommendation */
   onNewRecommendation?: (result: WhatIfResponse) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function WhatIfPanel({ ranking, onNewRecommendation }: WhatIfPanelProps) {
-  const allZones = ranking
   const [selectedZoneId, setSelectedZoneId] = useState(
-    allZones[0]?.wildfire_id?.toString() ?? ''
+    ranking[0]?.wildfire_id?.toString() ?? ''
   )
   const [selectedCondition, setSelectedCondition] = useState(CONDITIONS[0].value)
   const [isCalculating, setIsCalculating] = useState(false)
@@ -109,32 +105,44 @@ export default function WhatIfPanel({ ranking, onNewRecommendation }: WhatIfPane
 
   return (
     <div className="bg-slate-900 border border-slate-700 rounded p-4 space-y-3">
-      <h3 className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
-        What-If
-      </h3>
 
-      {/* ── Controls ── */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 text-xs flex-shrink-0">If</span>
+      {/* Header */}
+      <div>
+        <h3 className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
+          What-If Simulator
+        </h3>
+        <p className="text-slate-500 text-xs mt-0.5">
+          Change a condition and see how the recommendation shifts.
+        </p>
+      </div>
+
+      {/* ── Controls: sentence-style layout ── */}
+      <div className="bg-slate-800 rounded p-3 space-y-2">
+        <p className="text-slate-500 text-xs uppercase tracking-wide font-medium mb-1">
+          Scenario
+        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-slate-400 text-sm">If</span>
           <select
             value={selectedZoneId}
             onChange={(e) => { setSelectedZoneId(e.target.value); resetResult() }}
-            className="flex-1 bg-slate-800 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1.5 min-w-0 focus:outline-none focus:border-slate-500"
+            aria-label="Select wildfire zone"
+            className="flex-1 min-w-0 bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500"
           >
-            {allZones.map((z) => (
+            {ranking.map((z) => (
               <option key={z.wildfire_id} value={z.wildfire_id.toString()}>
                 {z.wildfire_name}
               </option>
             ))}
           </select>
         </div>
-
         <div className="flex items-center gap-2">
+          <ChevronRight className="w-3 h-3 text-slate-600 flex-shrink-0" />
           <select
             value={selectedCondition}
             onChange={(e) => { setSelectedCondition(e.target.value); resetResult() }}
-            className="flex-1 bg-slate-800 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1.5 min-w-0 focus:outline-none focus:border-slate-500"
+            aria-label="Select condition"
+            className="flex-1 min-w-0 bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500"
           >
             {CONDITIONS.map((c) => (
               <option key={c.value} value={c.value}>
@@ -149,7 +157,8 @@ export default function WhatIfPanel({ ranking, onNewRecommendation }: WhatIfPane
       <button
         onClick={handleRecalculate}
         disabled={isCalculating || !selectedZoneId}
-        className="w-full bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-sm font-medium py-1.5 px-4 rounded border border-slate-600 transition-colors flex items-center justify-center gap-2"
+        aria-label="Run What-If recalculation"
+        className="w-full bg-blue-900/60 hover:bg-blue-900/90 disabled:opacity-50 disabled:cursor-not-allowed text-blue-200 text-sm font-semibold py-2 px-4 rounded border border-blue-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-700 flex items-center justify-center gap-2"
         type="button"
       >
         <RefreshCw className={`w-3.5 h-3.5 ${isCalculating ? 'animate-spin' : ''}`} />
@@ -164,7 +173,7 @@ export default function WhatIfPanel({ ranking, onNewRecommendation }: WhatIfPane
         </div>
       )}
 
-      {/* ── Result: before / after comparison ── */}
+      {/* ── Result ── */}
       {result && <WhatIfResult result={result} />}
     </div>
   )
@@ -176,64 +185,64 @@ function WhatIfResult({ result }: { result: WhatIfResponse }) {
   const changed = result.recommendation_changed
 
   return (
-    <div className="space-y-3 pt-1">
+    <div className="space-y-3 pt-1 border-t border-slate-700">
+
+      {/* Changed / unchanged status */}
+      <div className="flex items-center gap-2 pt-1">
+        <span
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded border ${
+            changed
+              ? 'bg-orange-900/50 border-orange-700 text-orange-300'
+              : 'bg-emerald-900/40 border-emerald-800 text-emerald-400'
+          }`}
+        >
+          {changed ? '⚡ Recommendation Changed' : '✓ Recommendation Unchanged'}
+        </span>
+      </div>
+
       {/* Before → After */}
-      <div className="bg-slate-800 border border-slate-600 rounded p-3 space-y-2">
-
-        {/* Label row */}
-        <div className="flex items-center justify-between text-xs text-slate-500 font-medium uppercase tracking-wide">
-          <span>Before</span>
-          <ArrowRight className="w-3 h-3" />
-          <span>After</span>
-        </div>
-
-        {/* Zone names */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-slate-300 text-xs font-medium truncate flex-1">
-            {result.original_recommendation ?? 'None'}
-          </span>
-          <ArrowRight className="w-3 h-3 text-slate-600 flex-shrink-0" />
-          <span
-            className={`text-xs font-semibold truncate flex-1 text-right ${
-              changed ? 'text-orange-300' : 'text-emerald-400'
-            }`}
-          >
-            {result.new_recommendation ?? 'None'}
-          </span>
-        </div>
-
-        {/* Changed / unchanged badge */}
-        <div className="pt-0.5">
-          {changed ? (
-            <span className="inline-block bg-orange-900/60 border border-orange-700 text-orange-300 text-xs px-2 py-0.5 rounded">
-              Recommendation changed
-            </span>
-          ) : (
-            <span className="inline-block bg-emerald-900/40 border border-emerald-800 text-emerald-400 text-xs px-2 py-0.5 rounded">
-              Recommendation unchanged
-            </span>
-          )}
+      <div className="bg-slate-800 border border-slate-700 rounded p-3 space-y-2">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+          <div>
+            <p className="text-slate-500 text-[10px] uppercase tracking-wide font-medium mb-0.5">Before</p>
+            <p className="text-slate-300 text-xs font-medium leading-snug">
+              {result.original_recommendation ?? 'None'}
+            </p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-600 flex-shrink-0" />
+          <div className="text-right">
+            <p className="text-slate-500 text-[10px] uppercase tracking-wide font-medium mb-0.5">After</p>
+            <p
+              className={`text-xs font-semibold leading-snug ${
+                changed ? 'text-orange-300' : 'text-emerald-400'
+              }`}
+            >
+              {result.new_recommendation ?? 'None'}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Score delta — only for the zone that changed */}
+      {/* Score delta */}
       {result.score_changes.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-slate-500 text-xs uppercase tracking-wide font-medium">Score impact</p>
+          <p className="text-slate-500 text-[10px] uppercase tracking-wide font-medium">
+            Score Impact
+          </p>
           {result.score_changes.map((sc) => (
             <ScoreDeltaRow key={sc.wildfire_id} change={sc} />
           ))}
         </div>
       )}
 
-      {/* Reasons from backend */}
+      {/* Reasons */}
       {result.reasons.length > 0 && (
         <div className="space-y-1">
-          <p className="text-slate-500 text-xs uppercase tracking-wide font-medium">Why</p>
+          <p className="text-slate-500 text-[10px] uppercase tracking-wide font-medium">Why</p>
           <ul className="space-y-1">
             {result.reasons.map((r, i) => (
               <li key={i} className="text-slate-400 text-xs leading-relaxed flex gap-1.5">
-                <span className="text-slate-600 flex-shrink-0">·</span>
+                <span className="text-slate-600 flex-shrink-0 mt-0.5">·</span>
                 {r}
               </li>
             ))}
@@ -259,9 +268,7 @@ function ScoreDeltaRow({ change }: { change: import('@/lib/types').ScoreChange }
       <div className="flex items-center justify-between gap-2">
         <span className="text-slate-300 text-xs truncate flex-1">{change.wildfire_name}</span>
         {!change.new_feasible && change.original_feasible ? (
-          <span className="text-slate-500 text-xs uppercase tracking-wide">
-            Not observable
-          </span>
+          <span className="text-slate-500 text-xs italic">Not observable</span>
         ) : (
           <span
             className={`text-xs font-mono font-semibold tabular-nums ${
