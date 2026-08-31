@@ -61,7 +61,6 @@ def generate(
     client = _get_client()
 
     config = types.GenerateContentConfig(
-        temperature=temperature,
         system_instruction=system_instruction or None,
     )
 

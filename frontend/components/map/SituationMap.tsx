@@ -157,7 +157,7 @@ export default function SituationMap({
 
         const popup = new Popup({ offset: radius + 4, closeButton: false })
           .setHTML(`
-            <div style="font-family:system-ui,sans-serif;padding:6px 8px;min-width:160px">
+            <div style="font-family:var(--font-outfit),system-ui,sans-serif;padding:6px 8px;min-width:160px">
               <div style="font-weight:600;font-size:13px;margin-bottom:4px">${wf.name}</div>
               <div style="font-size:11px;color:#6b7280">Severity: ${wf.severity}/100</div>
               <div style="font-size:11px;color:#6b7280">Growth rate: ${wf.fire_growth_rate}/100</div>
@@ -190,7 +190,7 @@ export default function SituationMap({
 
         const popup = new Popup({ offset: 12, closeButton: false })
           .setHTML(`
-            <div style="font-family:system-ui,sans-serif;padding:6px 8px;min-width:140px">
+            <div style="font-family:var(--font-outfit),system-ui,sans-serif;padding:6px 8px;min-width:140px">
               <div style="font-weight:600;font-size:13px;margin-bottom:4px">${sat.name}</div>
               <div style="font-size:11px;color:#6b7280">Visibility: ${sat.visibility_score}%</div>
               <div style="font-size:11px;color:#6b7280">Window: ${sat.observation_window_minutes} min</div>
