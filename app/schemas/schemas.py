@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -73,3 +74,54 @@ class ObservationOpportunityRead(ObservationOpportunityBase):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── Recommendation API response models ───────────────────────────────────────
+
+class PriorityBreakdownResponse(BaseModel):
+    """Sub-score breakdown for the priority calculation."""
+    human_impact: float
+    fire_severity: float
+    urgency: float
+    infrastructure: float
+    time_sensitivity: float
+
+
+class FeasibilityBreakdownResponse(BaseModel):
+    """Sub-score breakdown for the feasibility calculation."""
+    visibility_score: float
+    window_score: float
+    availability_score: float
+
+
+class ZoneRankingItem(BaseModel):
+    """One ranked zone in the recommendation response."""
+    rank: int
+    wildfire_id: int
+    wildfire_name: str
+    emergency_priority: float
+    satellite_feasibility: float
+    final_score: float
+    feasible: bool
+    is_recommended: bool
+    reasons: list[str]
+    priority_breakdown: PriorityBreakdownResponse
+    feasibility_breakdown: FeasibilityBreakdownResponse
+
+
+class RecommendationDetail(BaseModel):
+    """Detail block for the single recommended target."""
+    emergency_priority: float
+    satellite_feasibility: float
+    final_score: float
+    reasons: list[str]
+
+
+class RecommendationResponse(BaseModel):
+    """Full recommendation response returned by GET /api/recommendation."""
+    recommended_target: Optional[str]          # wildfire name, or None if all infeasible
+    recommended_wildfire_id: Optional[int]     # wildfire id for map highlighting
+    recommendation: Optional[RecommendationDetail]
+    ranking: list[ZoneRankingItem]
+    total_zones: int
+    feasible_zones: int

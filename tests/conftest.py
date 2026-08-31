@@ -1,22 +1,41 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
 from app.main import app
 
-# ── In-memory SQLite for tests ────────────────────────────────────────────────
+# ── Single shared in-memory SQLite connection ─────────────────────────────────
+#
+# SQLite :memory: databases are per-connection: each new connection gets an
+# empty database.  To share one in-memory DB across all sessions in a test run
+# we must use a single connection and route all sessions through it.
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
+# One engine, one connection for the whole session
 test_engine = create_engine(
-    TEST_DATABASE_URL, connect_args={"check_same_thread": False}
+    TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+# Reuse the same underlying connection for every session
+_connection = test_engine.connect()
+
+# Create all tables on that connection
+Base.metadata.create_all(bind=_connection)
+
+# Bind a sessionmaker to the shared connection
+TestingSessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=_connection,
+)
 
 
 def override_get_db():
+    """FastAPI dependency override — yields a session on the shared connection."""
     db = TestingSessionLocal()
     try:
         yield db
@@ -26,9 +45,9 @@ def override_get_db():
 
 @pytest.fixture(scope="session", autouse=True)
 def create_tables():
-    Base.metadata.create_all(bind=test_engine)
+    # Tables are already created at module import time (see above).
+    # This fixture exists so other test modules can declare it as a dependency.
     yield
-    Base.metadata.drop_all(bind=test_engine)
 
 
 @pytest.fixture

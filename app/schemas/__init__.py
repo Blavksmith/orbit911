@@ -5,6 +5,11 @@ from app.schemas.schemas import (
     SatelliteRead,
     ObservationOpportunityCreate,
     ObservationOpportunityRead,
+    PriorityBreakdownResponse,
+    FeasibilityBreakdownResponse,
+    ZoneRankingItem,
+    RecommendationDetail,
+    RecommendationResponse,
 )
 
 __all__ = [
@@ -14,4 +19,9 @@ __all__ = [
     "SatelliteRead",
     "ObservationOpportunityCreate",
     "ObservationOpportunityRead",
+    "PriorityBreakdownResponse",
+    "FeasibilityBreakdownResponse",
+    "ZoneRankingItem",
+    "RecommendationDetail",
+    "RecommendationResponse",
 ]
