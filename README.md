@@ -6,7 +6,7 @@ Orbit911 is an AI-assisted decision-support system that helps emergency operatio
 
 During a fast-moving wildfire, operators must consider fire severity, population exposure, critical infrastructure, urgency, and satellite availability at the same time. Orbit911 combines these signals into an explainable observation recommendation.
 
-![Orbit911 Dashboard](docs/dashboard.png)
+![Orbit911 Dashboard](dashboard.png)
 
 ---
 
