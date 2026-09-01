@@ -6,7 +6,7 @@ Orbit911 is an AI-assisted decision-support system that helps emergency operatio
 
 During a fast-moving wildfire, operators must consider fire severity, population exposure, critical infrastructure, urgency, and satellite availability at the same time. Orbit911 combines these signals into an explainable observation recommendation.
 
-> **Built for the IBM AI Builders Challenge (August 2026).**
+![Orbit911 Dashboard](docs/dashboard.png)
 
 ---
 
@@ -74,6 +74,20 @@ RECALCULATE
 ```
 
 Orbit911 evaluates wildfire zones, checks whether they can currently be observed, ranks the available options, and recommends the highest-value observation target.
+
+---
+
+## How IBM Bob was used
+
+IBM Bob was used as an AI development copilot throughout the project.
+
+- **Planning:** Helped turn the PRD into a clear development plan and implementation steps.
+- **Backend:** Assisted with FastAPI, database models, decision engine, APIs, and Gemini integration.
+- **Frontend:** Assisted with building and integrating the Next.js dashboard.
+- **UI/UX:** Used a custom **UI/UX design skill** in IBM Bob to guide a clean, user-friendly, and anti-slop interface.
+- **Testing & Debugging:** Assisted in identifying and fixing development and integration issues.
+
+IBM Bob supported the development process, while the product decisions and final implementation remained human-directed.
 
 ---
 
